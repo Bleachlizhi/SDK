@@ -1,96 +1,111 @@
-﻿using UnityEngine;
-using System.Collections;
-//引入库
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
+using UnityEngine;
+using MyToolsSetting;
+using System.Text;
+using System;
 
-public class TCPClient : MonoBehaviour
+public class TCPClient
 {
-    Socket serverSocket; //服务器端socket
-    IPEndPoint ipEnd;
-    string recvStr; //接收的字符串
-    string sendStr; //发送的字符串
-    byte[] recvData = new byte[1024]; //接收的数据，必须为字节
-    byte[] sendData = new byte[1024]; //发送的数据，必须为字节
-    int recvLen; //接收的数据长度
-    Thread connectThread; //连接线程
-    //初始化
-    void InitSocket()
+    private string _ip;
+    private int _port;
+    private Thread _thread;
+    private ThreadStart _threadStart;
+
+    public string _recStr;
+    int _recLength;
+
+
+    private const int BUFFER_SIZE = 128;
+    Socket _socket;
+    IPEndPoint _iPEndPoint;
+    bool isConnect;
+    /// <summary>
+    /// 初始化
+    /// </summary>
+    /// <param name="ip"></param>
+    /// <param name="port"></param>
+    public TCPClient(string ip, int port)
     {
-        //定义服务器的IP和端口，端口与服务器对应
-        ipEnd = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 8000);
-        //开启一个线程连接，必须的，否则主线程卡死
-        connectThread = new Thread(new ThreadStart(SocketReceive));
-        connectThread.Start();
+        this._ip = ip;
+        this._port = port;
+        this._iPEndPoint = new IPEndPoint(IPAddress.Parse(this._ip), this._port);
+        this._threadStart = new ThreadStart(Receive);
+        this._thread = new Thread(this._threadStart);
+        this._thread.Start();
     }
-
-    void SocketConnet()
+    /// <summary>
+    /// 连接至服务器
+    /// </summary>
+    void SocketConnect()
     {
-        if (serverSocket != null)
-            serverSocket.Close();
-        //定义套接字类型,必须在子线程中定义
-        serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        print("ready to connect");
-        //连接
-        serverSocket.Connect(ipEnd);
-
-        //输出初次连接收到的字符串
-        recvLen = serverSocket.Receive(recvData);
-        recvStr = Encoding.Default.GetString(recvData, 0, recvLen);
+        if (this._socket != null)
+            this._socket.Close();
+        try
+        {
+            _socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            MyDebug.Log(">>>准备连接", MyColor.State.green);
+            _socket.Connect(this._iPEndPoint);
+            MyDebug.Log(">>>连接至服务器：" + this._ip, MyColor.State.green);
+        }
+        catch (Exception e)
+        {
+            MyDebug.Log(e.ToString(), MyColor.State.red);
+        }
     }
-
-    public void SocketSend(string sendStr)
+    /// <summary>
+    /// 消息至服务端
+    /// </summary>
+    /// <param name="str"></param>
+    public void Send(string str)
     {
-        //清空发送缓存
-        sendData = new byte[1024];
-        //数据类型转换
-        sendData = Encoding.Default.GetBytes(sendStr);
-        //发送
-        serverSocket.Send(sendData, sendData.Length, SocketFlags.None);
+        if (string.IsNullOrEmpty(str))
+            return;
+        if (!this._socket.Connected)
+            return;
+        byte[] _sendBuff = new byte[BUFFER_SIZE];
+        _sendBuff = Encoding.UTF8.GetBytes(str);
+        _socket.Send(_sendBuff, _sendBuff.Length, SocketFlags.None);
+        MyDebug.Log(">>>发送:" + str, MyColor.State.green);
     }
-
-    void SocketReceive()
+    /// <summary>
+    /// 接收服务端消息
+    /// </summary>
+    void Receive()
     {
-        SocketConnet();
-        //不断接收服务器发来的数据
+        SocketConnect();
         while (true)
         {
-            recvData = new byte[1024];
-            recvLen = serverSocket.Receive(recvData);
-            if (recvLen == 0)
+            if (!this._socket.Connected)
             {
-                SocketConnet();
-                continue;
+                Thread.Sleep(2000);
+                SocketConnect();
             }
-            recvStr = Encoding.ASCII.GetString(recvData, 0, recvLen);
-            print(recvStr);
+            else
+            {
+                byte[] _recBuff = new byte[BUFFER_SIZE];
+                this._recLength = this._socket.Receive(_recBuff);
+                if (this._recLength == 0)
+                {
+                    SocketConnect();
+                    continue;
+                }
+                this._recStr = Encoding.UTF8.GetString(_recBuff, 0, this._recLength);
+                MyDebug.Log(">>>接收到信息:" + this._recStr, MyColor.State.yellow);
+            }
         }
     }
-
-    void SocketQuit()
+    /// <summary>
+    /// 关闭Socket
+    /// </summary>
+    public void CloseSocket()
     {
-        //关闭线程
-        if (connectThread != null)
-        {
-            connectThread.Interrupt();
-            connectThread.Abort();
-        }
-        //最后关闭服务器
-        if (serverSocket != null)
-            serverSocket.Close();
-        print("diconnect");
-    }
-
-    // Use this for initialization
-    void Start()
-    {
-        InitSocket();
-    }
-    //程序退出则关闭连接
-    void OnApplicationQuit()
-    {
-        SocketQuit();
+        if (this._thread != null)
+            this._thread.Abort();
+        if (this._socket != null)
+            this._socket.Close();
     }
 }

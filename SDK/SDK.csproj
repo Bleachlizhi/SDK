@@ -162,6 +162,7 @@
     <Compile Include="Assets\_Scripts\_Camera\MouseOrbit.cs" />
     <Compile Include="Assets\_Scripts\_LineRender\LineControl.cs" />
     <Compile Include="Assets\_Scripts\_NetWork\TCPClient.cs" />
+    <Compile Include="Assets\_Scripts\_NetWork\TCPServer.cs" />
     <Compile Include="Assets\_Scripts\_NetWork\UDPMessage.cs" />
     <Compile Include="Assets\_Scripts\_PortScripts\PortControl.cs" />
     <Compile Include="Assets\_Scripts\_Tools\ActionTools.cs" />
@@ -170,6 +171,7 @@
     <Compile Include="Assets\_Scripts\_Tools\RayTools.cs" />
     <Compile Include="Assets\_Scripts\_Tools\ReadExternalFilesTools.cs" />
     <Compile Include="Assets\_Scripts\_Tools\ScreenSettingForWindows.cs" />
+    <Compile Include="Assets\_Scripts\_Tools\Soft_加密.cs" />
     <Compile Include="Assets\_Scripts\_Tools\SortManage.cs" />
     <Compile Include="Assets\_Scripts\_Tools\Tool.cs" />
     <Compile Include="Assets\_Scripts\_Tools\VideoTools.cs" />
